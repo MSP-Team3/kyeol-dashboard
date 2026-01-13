@@ -27,7 +27,7 @@ jobs:
             api_url: https://origin-stage.kyeol.click/graphql/
           - env: prod
             ecr_repo: kyeol-prod-dashboard
-            api_url: https://origin-prod.kyeol.click/graphql/
+            api_url: https://api.kyeol.click/graphql/
 
     steps:
       - name: Checkout
