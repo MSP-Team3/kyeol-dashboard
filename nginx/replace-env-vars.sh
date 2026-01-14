@@ -5,8 +5,8 @@
 
 set -e
 
-# Find all index.html files in /app and subdirectories to be safe
-INDEX_BUNDLE_PATHS=$(find /app -name "index.html")
+# Find all index.html and .js files in /app and subdirectories to be safe
+TARGET_FILES=$(find /app -type f \( -name "*.html" -o -name "*.js" \))
 
 # Function to replace environment variables
 replace_env_var() {
@@ -14,7 +14,7 @@ replace_env_var() {
   var_value=$(eval echo \$"$var_name")
   if [ -n "$var_value" ]; then
     echo "Setting $var_name to: $var_value"
-    for path in $INDEX_BUNDLE_PATHS; do
+    for path in $TARGET_FILES; do
       echo "Applying to $path"
       sed -i "s#$var_name: \".*\"#$var_name: \"$var_value\"#" "$path"
     done
@@ -31,7 +31,7 @@ replace_env_var "APP_MOUNT_URI"
 # Fallback: Force replace the known incorrect origin-prod URL if API_URL is provided
 if [ -n "$API_URL" ]; then
   echo "Force replacing any residue origin-prod URLs with $API_URL"
-  for path in $INDEX_BUNDLE_PATHS; do
+  for path in $TARGET_FILES; do
     echo "Applying force-replacement to $path"
     sed -i "s#https://origin-prod.kyeol.click/graphql/#$API_URL#g" "$path"
   done
