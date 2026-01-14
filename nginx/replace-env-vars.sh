@@ -5,7 +5,8 @@
 
 set -e
 
-INDEX_BUNDLE_PATH="/app/dashboard/index.html"
+# Find all index.html files in /app and subdirectories
+INDEX_BUNDLE_PATHS=$(find /app -name "index.html")
 
 # Function to replace environment variables
 replace_env_var() {
@@ -13,7 +14,10 @@ replace_env_var() {
   var_value=$(eval echo \$"$var_name")
   if [ -n "$var_value" ]; then
     echo "Setting $var_name to: $var_value"
-    sed -i "s#$var_name: \".*\"#$var_name: \"$var_value\"#" "$INDEX_BUNDLE_PATH"
+    for path in $INDEX_BUNDLE_PATHS; do
+      echo "Applying to $path"
+      sed -i "s#$var_name: \".*\"#$var_name: \"$var_value\"#" "$path"
+    done
   else
     echo "No $var_name provided, using defaults."
   fi
@@ -24,10 +28,13 @@ replace_env_var "API_URL"
 replace_env_var "API_URI"
 replace_env_var "APP_MOUNT_URI"
 
-# Fallback: Force replace the known incorrect origin-prod URL if API_URL is provided
+# Fallback: Force replace the known incorrect origin-prod URL
 if [ -n "$API_URL" ]; then
   echo "Force replacing origin-prod with $API_URL"
-  sed -i "s#https://origin-prod.kyeol.click/graphql/#$API_URL#g" "$INDEX_BUNDLE_PATH"
+  for path in $INDEX_BUNDLE_PATHS; do
+    echo "Applying force-replacement to $path"
+    sed -i "s#https://origin-prod.kyeol.click/graphql/#$API_URL#g" "$path"
+  done
 fi
 
 echo "Environment variable replacement complete."
