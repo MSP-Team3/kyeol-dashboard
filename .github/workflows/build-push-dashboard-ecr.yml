@@ -66,3 +66,32 @@ jobs:
           echo "### Image pushed successfully! :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "- Repository: \`${{ matrix.ecr_repo }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Tags: \`${{ matrix.env }}-latest\`, \`${{ matrix.env }}-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+      # Update GitOps repo to trigger ArgoCD deployment
+      - name: Update GitOps Repository
+        if: matrix.env == 'prod'
+        env:
+          GITOPS_REPO: MSP-Team3/kyeol-app-gitops
+          IMAGE_TAG: ${{ matrix.env }}-${{ github.sha }}
+        run: |
+          # Clone GitOps repo
+          git clone https://x-access-token:${{ secrets.GITOPS_TOKEN }}@github.com/${{ env.GITOPS_REPO }}.git gitops
+          cd gitops
+
+          # Update dashboard image tag in kustomization.yaml
+          awk '/kyeol-prod-dashboard/{found=1} found && /newTag:/{sub(/newTag: .*/, "newTag: '"${IMAGE_TAG}"'"); found=0} 1' \
+            apps/saleor-dashboard/overlays/prod/kustomization.yaml > tmp && mv tmp apps/saleor-dashboard/overlays/prod/kustomization.yaml
+
+          # Verify the change
+          echo "Updated kustomization.yaml:"
+          grep -A1 "kyeol-prod-dashboard" apps/saleor-dashboard/overlays/prod/kustomization.yaml
+
+          # Commit and push
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add apps/saleor-dashboard/overlays/prod/kustomization.yaml
+          git diff --cached --exit-code || git commit -m "chore(dashboard): Update image tag to ${IMAGE_TAG}
+
+          Triggered by: ${{ github.event.head_commit.message }}
+          Commit: ${{ github.sha }}"
+          git push || echo "Nothing to push (tag unchanged)"
